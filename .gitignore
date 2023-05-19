@@ -1,0 +1,20 @@
+# Specifies intentionally untracked files to ignore when using Git
+# http://git-scm.com/docs/gitignore
+
+
+
+.ipynb_checkpoints/
+__pycache__
+extra/
+.DS_Store
+extra/.DS_Store
+._*
+.idea/
+.Rproj.user
+columbia_gaze_data_set
+!columbia_gaze_data_set/README*
+!columbia_gaze_data_set/*.py
+.output
+
+docs
+analysis/*.nb.html

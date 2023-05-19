@@ -1,0 +1,190 @@
+---
+title: "GazeScorer model analysis"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(glue)
+
+strategies <- c("default", "diff", "diff_threshold", "default_threshold")
+combined <- NULL
+
+for (strategy in strategies) {
+  .results <- read_csv(paste0("../.output/models/", strategy, "/results.csv"))
+  .metadata <- read_csv(paste0("../.output/models/", strategy, "/metadata.csv"))
+  .d <- bind_cols(.metadata, .results)
+  assign(strategy, .d)
+  combined <- bind_rows(combined, mutate(.d, strategy = strategy))
+}
+
+combined <- combined %>%
+  separate(strategy, c("difference_image", "binary_image"), fill = "right", remove = F) %>%
+  mutate(
+    difference_image = difference_image == "diff",
+    binary_image = case_when(binary_image == "threshold" ~ T, T ~ F)
+  ) %>%
+  separate(
+    col = file, 
+    into = c("eye", "image"), 
+    sep = "_eye_"
+  ) %>%
+  mutate(correct = predicted_class == actual_class)
+
+```
+
+```{r}
+
+ggplot(combined, aes(x = magnitude, y = prob_left, colour = factor(abs(magnitude)))) +
+  facet_grid(rows = vars(binary_image), cols = vars(difference_image), labeller = "label_both") +
+  stat_summary(fun = mean) +
+  stat_summary(geom = "errorbar", fun.data = mean_cl_normal) +
+  geom_point(alpha = 0.2, position = position_jitter()) +
+  geom_smooth(aes(colour = NA), se = F) +
+  ggtitle(glue("Predictive accuracy of classification")) +
+  theme(legend.position = "top")
+
+```
+
+Prediction with eyes combined.
+
+```{r}
+
+eye_average <- combined %>% 
+  nest(prob_left = c(eye, prob_left, predicted_class, correct)) %>%
+  filter(map_int(prob_left, nrow) == 2) %>%
+  mutate(
+    prob_left = map_dbl(prob_left, function(df) {
+      df %>% 
+        select(-predicted_class, -correct) %>%
+        pivot_wider(names_from = eye, values_from = prob_left) %>%
+        transmute(x = mean(left, right)) %>%
+        .$x %>%
+        as.numeric()
+    }),
+    correct = (prob_left > .5) == (actual_class == "left")
+  ) 
+
+ggplot(eye_average, aes(x = magnitude, y = prob_left, colour = factor(abs(magnitude)))) +
+  facet_grid(rows = vars(binary_image), cols = vars(difference_image), labeller = "label_both") +
+  stat_summary(fun = mean) +
+  stat_summary(geom = "errorbar", fun.data = mean_cl_normal) +
+  geom_point(alpha = 0.2, position = position_jitter()) +
+  geom_smooth(aes(colour = NA), se = F) +
+  ggtitle(glue("Predictive accuracy of classification (eyes averaged)")) +
+  theme(legend.position = "top")
+
+# For comparison, the accuracy graphs for the same eyes separately
+combined %>% 
+  nest(prob_left = c(eye, prob_left)) %>%
+  filter(map_int(prob_left, nrow) == 2) %>%
+  unnest(prob_left) %>%
+  ggplot(aes(x = magnitude, y = prob_left, colour = factor(abs(magnitude)))) +
+  facet_grid(rows = vars(binary_image), cols = vars(difference_image), labeller = "label_both") +
+  stat_summary(fun = mean) +
+  stat_summary(geom = "errorbar", fun.data = mean_cl_normal) +
+  geom_point(alpha = 0.2, position = position_jitter()) +
+  geom_smooth(aes(colour = NA), se = F) +
+  ggtitle(glue("Predictive accuracy of classification (eyes alone)")) +
+  theme(legend.position = "top")
+
+```
+
+Accuracy stats
+
+```{r}
+
+acc <- combined %>% 
+  group_by(magnitude, correct) %>% 
+  summarise(n = n(), .groups = "drop") %>%
+  nest(d = -magnitude) %>%
+  mutate(
+    accuracy = map_dbl(
+      d, function(df) {
+        df %>% 
+          pivot_wider(names_from = correct, names_prefix = "n", values_from = n) %>% 
+          transmute(x = nTRUE / (nTRUE + nFALSE)) %>% 
+          .$x
+      }
+    )
+  ) %>%
+  select(-d)
+eye_acc <- eye_average %>% 
+  group_by(magnitude, correct) %>% 
+  summarise(n = n(), .groups = "drop") %>%
+  nest(d = -magnitude) %>%
+  mutate(
+    accuracy = map_dbl(
+      d, function(df) {
+        df %>% 
+          pivot_wider(names_from = correct, names_prefix = "n", values_from = n) %>% 
+          transmute(x = nTRUE / (nTRUE + nFALSE)) %>% 
+          .$x
+      }
+    )
+  ) %>%
+  select(-d)
+
+bind_rows(
+  mutate(acc, eyes = "separate"),
+  mutate(eye_acc, eyes = "averaged")
+) %>%
+  pivot_wider(names_from = eyes, names_prefix = "accuracy_", values_from = accuracy) %>%
+  mutate(accuracy_difference = accuracy_averaged - accuracy_separate) #%>%
+  # summarise(across(starts_with("accuracy"), mean))
+```
+
+```{r}
+
+for (stragey in strategies) {
+  print(
+    ggplot(get(strategy), aes(x = magnitude, y = prob_left, colour = factor(abs(magnitude)))) +
+      stat_summary(fun = mean) +
+      stat_summary(geom = "errorbar", fun.data = mean_cl_normal) +
+      geom_point(alpha = 0.2, position = position_jitter()) +
+      ggtitle(glue("Predictive accuracy of classification ({strategy})"))
+  )
+}
+
+```
+
+```{r}
+
+ggplot(diff, aes(x = magnitude, y = prob_left, colour = factor(abs(magnitude)))) +
+  stat_summary(fun = mean) +
+  stat_summary(geom = "errorbar", fun.data = mean_cl_normal) +
+  geom_point(alpha = 0.2, position = position_jitter()) +
+  ggtitle("Predictive accuracy of classification (difference-based images)")
+
+```
+
+Direct comparison of models
+
+```{r}
+
+diff_advantage <- d %>%
+  left_join(diff, by = names(meta), suffix = c("", ".diff")) %>%
+  mutate(
+    prob_left = prob_left.diff - prob_left,
+    score = as.numeric(predicted_class.diff == actual_class.diff) - as.numeric(predicted_class == actual_class),
+    accuracy = case_when(
+      actual_class == 'left' ~ prob_left.diff - prob_left,
+      actual_class == 'right' ~ (1 - prob_left.diff) - (1 - prob_left)
+    )
+  ) %>%
+  select(file, magnitude, prob_left, score, accuracy)
+
+diff_advantage %>% 
+  summarise(across(-c(file, magnitude), mean))
+
+```
+
+```{r}
+
+ggplot(diff_advantage, aes(x = magnitude, y = prob_left, colour = factor(abs(magnitude)))) +
+  stat_summary(fun = mean) +
+  stat_summary(geom = "errorbar", fun.data = mean_cl_normal) +
+  geom_point(alpha = 0.2, position = position_jitter()) +
+  ggtitle("Predictive accuracy of classification (difference-based - default)")
+
+```
