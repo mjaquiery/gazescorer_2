@@ -34,7 +34,7 @@ ggplot(results, aes(y = prob_left, x = actual_class == "right", colour = eye)) +
   ggtitle(glue("Predictive accuracy of classification")) +
   theme(legend.position = "top")
 
-ggplot(frame_average, aes(x = prob_left, fill = actual_class == "right")) +
+ggplot(results, aes(x = prob_left, fill = actual_class == "right")) +
   geom_histogram(binwidth = .05, position = "identity", alpha = 1/3) +
   facet_grid(rows = vars(strategy), labeller = "label_both")
 
