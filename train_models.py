@@ -29,41 +29,57 @@ for strategy in [r"diff", r"default", r"diff_threshold", r"default_threshold"]:
 
     results = pandas.DataFrame(columns=["prob_left", "predicted_class", "actual_class"])
 
-    for i in range(len(eye_images)):
-        training_images = np.delete(eye_images, i, axis=0)
-        training_labels = np.delete(labels, i, axis=0)
+    # for i in range(len(eye_images)):
+    #     training_images = np.delete(eye_images, i, axis=0)
+    #     training_labels = np.delete(labels, i, axis=0)
+    # 
+    #     # Train the model
+    #     model = tf.keras.Sequential([
+    #         tf.keras.layers.Flatten(input_shape=eye_images.shape[1:]),
+    #         tf.keras.layers.Dense(128, activation='relu'),
+    #         tf.keras.layers.Dense(2)  # 2 classes: left and right
+    #     ])
+    # 
+    #     model.compile(
+    #         optimizer='adam',
+    #         loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+    #         metrics=['accuracy', 'mse']
+    #     )
+    # 
+    #     model.fit(training_images, training_labels, epochs=1, verbose=0)
+    # 
+    #     # Test model fit on test data
+    #     test_images = np.array([eye_images[i]])
+    #     test_labels = np.array([labels[i]])
+    # 
+    #     test_loss, test_acc, test_mse = model.evaluate(test_images,  test_labels, verbose=0)
+    # 
+    #     print(f'Test accuracy: {test_acc}, MSE: {test_mse}')
+    # 
+    #     probability_model = tf.keras.Sequential([model, tf.keras.layers.Softmax()])
+    #     predictions = probability_model.predict(test_images)
+    # 
+    #     # Save the results
+    #     results.loc[i] = [predictions[0][0], class_names[np.argmax(predictions[0])], class_names[test_labels[0]]]
+    # 
+    # results.to_csv(os.path.join(output_dir, "results.csv"), index=False)
 
-        # Train the model
-        model = tf.keras.Sequential([
-            tf.keras.layers.Flatten(input_shape=eye_images.shape[1:]),
-            tf.keras.layers.Dense(128, activation='relu'),
-            tf.keras.layers.Dense(2)  # 2 classes: left and right
-        ])
+    # Save a version of the model with all training data
+    # Train the model
+    model = tf.keras.Sequential([
+        tf.keras.layers.Flatten(input_shape=eye_images.shape[1:]),
+        tf.keras.layers.Dense(128, activation='relu'),
+        tf.keras.layers.Dense(2)  # 2 classes: left and right
+    ])
 
-        model.compile(
-            optimizer='adam',
-            loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-            metrics=['accuracy', 'mse']
-        )
+    model.compile(
+        optimizer='adam',
+        loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+        metrics=['accuracy', 'mse']
+    )
 
-        model.fit(training_images, training_labels, epochs=1, verbose=0)
+    model.fit(eye_images, labels, epochs=16, verbose=0)
 
-        # Test model fit on test data
-        test_images = np.array([eye_images[i]])
-        test_labels = np.array([labels[i]])
+    model.save(os.path.join(output_dir, "model.h5"))
 
-        test_loss, test_acc, test_mse = model.evaluate(test_images,  test_labels, verbose=0)
-
-        print(f'Test accuracy: {test_acc}, MSE: {test_mse}')
-
-        probability_model = tf.keras.Sequential([model, tf.keras.layers.Softmax()])
-        predictions = probability_model.predict(test_images)
-
-        # Save the model
-        # model.save(os.path.join(output_dir, "model.h5"))
-
-        # Save the results
-        results.loc[i] = [predictions[0][0], class_names[np.argmax(predictions[0])], class_names[test_labels[0]]]
-
-    results.to_csv(os.path.join(output_dir, "results.csv"), index=False)
     print(f"Completed for input {input_dir}. Time elapsed: {time.time() - start_time} seconds")

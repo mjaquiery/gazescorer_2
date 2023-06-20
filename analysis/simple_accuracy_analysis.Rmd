@@ -44,6 +44,10 @@ ggplot(combined, aes(x = magnitude, y = prob_left, colour = factor(abs(magnitude
   ggtitle(glue("Predictive accuracy of classification")) +
   theme(legend.position = "top")
 
+ggplot(combined, aes(x = prob_left, fill = actual_class == "right")) +
+  geom_histogram(binwidth = .05, position = "identity", alpha = 1/3) +
+  facet_grid(rows = vars(binary_image), cols = vars(difference_image), labeller = "label_both")
+
 ```
 
 Prediction with eyes combined.
@@ -87,6 +91,10 @@ combined %>%
   geom_smooth(aes(colour = NA), se = F) +
   ggtitle(glue("Predictive accuracy of classification (eyes alone)")) +
   theme(legend.position = "top")
+
+ggplot(eye_average, aes(x = prob_left, fill = actual_class == "right")) +
+  geom_histogram(binwidth = .05, position = "identity", alpha = 1/3) +
+  facet_grid(rows = vars(binary_image), cols = vars(difference_image), labeller = "label_both")
 
 ```
 
