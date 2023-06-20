@@ -103,9 +103,9 @@ Accuracy stats
 ```{r}
 
 acc <- combined %>% 
-  group_by(magnitude, correct) %>% 
+  group_by(strategy, magnitude, correct) %>% 
   summarise(n = n(), .groups = "drop") %>%
-  nest(d = -magnitude) %>%
+  nest(d = -c(strategy, magnitude)) %>%
   mutate(
     accuracy = map_dbl(
       d, function(df) {
@@ -118,9 +118,9 @@ acc <- combined %>%
   ) %>%
   select(-d)
 eye_acc <- eye_average %>% 
-  group_by(magnitude, correct) %>% 
+  group_by(strategy, magnitude, correct) %>% 
   summarise(n = n(), .groups = "drop") %>%
-  nest(d = -magnitude) %>%
+  nest(d = -c(strategy, magnitude)) %>%
   mutate(
     accuracy = map_dbl(
       d, function(df) {
@@ -141,10 +141,34 @@ bind_rows(
   mutate(accuracy_difference = accuracy_averaged - accuracy_separate) #%>%
   # summarise(across(starts_with("accuracy"), mean))
 ```
+Overall accuracy stats
 
 ```{r}
 
-for (stragey in strategies) {
+acc <- combined %>% 
+  mutate(table = "acc") %>%
+  group_by(table, strategy, actual_class) %>% 
+  summarise(n = n(), accuracy = mean(correct), .groups = "drop")
+eye_acc <- eye_average %>% 
+  mutate(table = "eye_acc") %>%
+  group_by(table, strategy, actual_class) %>% 
+  summarise(n = n(), accuracy = mean(correct), .groups = "drop")
+
+acc
+acc %>% 
+  group_by(table, strategy) %>% 
+  summarise(accuracy = weighted.mean(accuracy, n), .groups = "drop")
+eye_acc
+eye_acc %>% 
+  group_by(table, strategy) %>% 
+  summarise(accuracy = weighted.mean(accuracy, n), .groups = "drop")
+
+
+```
+
+```{r}
+
+for (strategy in strategies) {
   print(
     ggplot(get(strategy), aes(x = magnitude, y = prob_left, colour = factor(abs(magnitude)))) +
       stat_summary(fun = mean) +
