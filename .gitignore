@@ -19,3 +19,4 @@ video_input/*
 !video_input/.gitkeep
 docs
 analysis/*.nb.html
+.input/

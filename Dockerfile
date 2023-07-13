@@ -20,5 +20,5 @@ RUN pip install pandas matplotlib scipy imutils plotnine scikit-learn keras tens
 RUN pip install ffmpeg
 RUN pip install ffmpeg-python opencv-python
 RUN pip install cmake
-RUN pip install dlib
+RUN pip install dlib retina-face deepface mediapipe
 CMD python

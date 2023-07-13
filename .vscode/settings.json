@@ -1,5 +1,0 @@
-{
-    "git.ignoreLimitWarning": true,
-    "python.pythonPath": "/Users/afraser/opt/anaconda3/bin/python",
-    "restructuredtext.confPath": "${workspaceFolder}/docs"
-}
