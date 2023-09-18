@@ -25,7 +25,7 @@ gaze_pipeline = Pipeline(
 
 start_time = time.time()
 
-results = pandas.DataFrame(columns=["video", "frame", "pitch", "yaw", "predicted_class", "actual_class"])
+results = pandas.DataFrame(columns=["video", "frame", "face_count", "pitch", "yaw", "predicted_class", "actual_class"])
 output_dir = os.path.join(r"./.output/L2CS_video_coding")
 
 for label in labels:
@@ -49,21 +49,19 @@ for label in labels:
             frame_results = gaze_pipeline.step(frame)
             yaw = frame_results.yaw
             pitch = frame_results.pitch
-            if len(yaw) != 1:
+            face_count = 0
+            if len(yaw) != 1 or len(pitch) != 1:
                 print(f"WARNING: Found {len(yaw)} faces in frame {frame_number} of {video_file}. Using the first entry.")
-                print(yaw)
                 yaw = yaw[0]
-
-            if len(pitch) != 1:
-                print(f"WARNING: Found {len(pitch)} faces in frame {frame_number} of {video_file}. Using the first entry.")
-                print(pitch)
                 pitch = pitch[0]
+                face_count = max(len(yaw), len(pitch))
 
             results.loc[len(results)] = [
                 video_file,
                 frame_number,
-                pitch,
-                yaw,
+                face_count,
+                float(pitch),
+                float(yaw),
                 labels[0 if pitch < 0 else 1],
                 label
             ]
