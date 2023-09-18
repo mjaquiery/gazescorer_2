@@ -51,7 +51,7 @@ for label in labels:
             frame_results = gaze_pipeline.step(frame)
             yaw = frame_results.yaw
             pitch = frame_results.pitch
-            face_count = 0
+            face_count = 1
             if len(yaw) != 1 or len(pitch) != 1:
                 face_count = max(len(yaw), len(pitch))
                 print(f"WARNING: Found {face_count} faces in frame {frame_number} of {video_file}. Using the first entry.")
