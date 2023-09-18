@@ -1,0 +1,155 @@
+---
+title: "GazeScorer model analysis using L2CS code"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(glue)
+
+results <- read_csv(paste0("../.output/L2CS_video_coding/", "/results.csv"))
+
+results <- results %>%
+  mutate(correct = predicted_class == actual_class)
+
+```
+
+```{r}
+
+ggplot(results, aes(y = pitch, fill = correct)) +
+  geom_histogram(binwidth = .05, position = 'identity', alpha = 1/3)
+
+ggplot(results, aes(y = yaw, fill = correct)) +
+  geom_histogram(binwidth = .05, position = 'identity', alpha = 1/3)
+
+ggplot(results, aes(y = pitch, x = yaw, colour = correct)) +
+  geom_point(alpha = 0.2) +
+  ggtitle(glue("Gaze direction verdicts")) +
+  theme(legend.position = "top")
+
+mean_cl_normal(results$correct)
+
+results %>% 
+  group_by(actual_class) %>%
+  summarise(accuracy = mean(correct))
+
+```
+
+Prediction with frames combined.
+
+```{r}
+
+frame_average <- results %>% 
+  group_by(strategy, video, eye, actual_class) %>%
+  summarise(prob_left = mean(prob_left), .groups = "drop")
+
+ggplot(frame_average, aes(x = actual_class == "right", y = prob_left, colour = eye)) +
+  facet_grid(rows = vars(strategy), labeller = "label_both") +
+  stat_summary(fun = mean) +
+  stat_summary(geom = "errorbar", fun.data = mean_cl_normal) +
+  geom_point(alpha = 0.2, position = position_jitter()) +
+  geom_smooth(aes(colour = NA), se = F) +
+  ggtitle(glue("Predictive accuracy of classification (frames averaged)")) +
+  theme(legend.position = "top")
+
+ggplot(frame_average, aes(x = prob_left, fill = actual_class == "right")) +
+  geom_histogram(binwidth = .05, position = "identity", alpha = 1/3) +
+  facet_grid(rows = vars(strategy), labeller = "label_both")
+
+```
+
+
+Prediction with eyes combined.
+
+```{r}
+
+eye_average <- results %>% 
+  left_join(
+    results %>% 
+    group_by(strategy, video, frame) %>% 
+      summarise(n = n(), .groups = "drop"),
+    by = c("strategy", "video", "frame")
+  ) %>%
+  filter(n == 2) %>%
+  group_by(strategy, video, frame, actual_class) %>%
+  summarise(prob_left = mean(prob_left), .groups = "drop")
+
+ggplot(eye_average, aes(x = actual_class == "right", y = prob_left)) +
+  facet_grid(rows = vars(strategy), labeller = "label_both") +
+  stat_summary(fun = mean) +
+  stat_summary(geom = "errorbar", fun.data = mean_cl_normal) +
+  geom_point(alpha = 0.2, position = position_jitter()) +
+  geom_smooth(aes(colour = NA), se = F) +
+  ggtitle(glue("Predictive accuracy of classification (eyes averaged)")) +
+  theme(legend.position = "top")
+
+ggplot(eye_average, aes(x = prob_left, fill = actual_class == "right")) +
+  geom_histogram(binwidth = .05, position = "identity", alpha = 1/3) +
+  facet_grid(rows = vars(strategy), labeller = "label_both")
+
+```
+
+Prediction with eyes combined and frames combined.
+
+```{r}
+
+combined_average <- eye_average %>% 
+  group_by(strategy, video, actual_class) %>%
+  summarise(prob_left = mean(prob_left), .groups = "drop")
+
+ggplot(combined_average, aes(x = actual_class == "right", y = prob_left)) +
+  facet_grid(rows = vars(strategy), labeller = "label_both") +
+  stat_summary(fun = mean) +
+  stat_summary(geom = "errorbar", fun.data = mean_cl_normal) +
+  geom_point(alpha = 0.2, position = position_jitter()) +
+  geom_smooth(aes(colour = NA), se = F) +
+  ggtitle(glue("Predictive accuracy of classification (frames averaged)")) +
+  theme(legend.position = "top")
+
+ggplot(combined_average, aes(x = prob_left, fill = actual_class == "right")) +
+  geom_histogram(binwidth = .05, position = "identity", alpha = 1/3) +
+  facet_grid(rows = vars(strategy), labeller = "label_both")
+
+```
+
+Accuracy stats
+
+```{r}
+
+acc <- results %>% 
+  mutate(table = "acc") %>%
+  group_by(table, strategy, actual_class) %>% 
+  summarise(n = n(), accuracy = mean(correct), .groups = "drop")
+frame_acc <- frame_average %>% 
+  mutate(table = "frame_acc") %>%
+  mutate(correct = (actual_class == "left") == (prob_left > .5)) %>%
+  group_by(table, strategy, actual_class) %>% 
+  summarise(n = n(), accuracy = mean(correct), .groups = "drop")
+eye_acc <- eye_average %>% 
+  mutate(table = "eye_acc") %>%
+  mutate(correct = (actual_class == "left") == (prob_left > .5)) %>%
+  group_by(table, strategy, actual_class) %>% 
+  summarise(n = n(), accuracy = mean(correct), .groups = "drop")
+combined_acc <- combined_average %>%
+  mutate(table = "combined_acc") %>%
+  mutate(correct = (actual_class == "left") == (prob_left > .5)) %>%
+  group_by(table, strategy, actual_class) %>% 
+  summarise(n = n(), accuracy = mean(correct), .groups = "drop")
+
+acc
+acc %>% 
+  group_by(table, strategy) %>% 
+  summarise(accuracy = weighted.mean(accuracy, n), .groups = "drop")
+frame_acc
+frame_acc %>% 
+  group_by(table, strategy) %>% 
+  summarise(accuracy = weighted.mean(accuracy, n), .groups = "drop")
+eye_acc
+eye_acc %>% 
+  group_by(table, strategy) %>% 
+  summarise(accuracy = weighted.mean(accuracy, n), .groups = "drop")
+combined_acc
+combined_acc %>% 
+  group_by(table, strategy) %>% 
+  summarise(accuracy = weighted.mean(accuracy, n), .groups = "drop")
+```

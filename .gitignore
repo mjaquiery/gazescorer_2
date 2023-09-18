@@ -20,3 +20,5 @@ video_input/*
 docs
 analysis/*.nb.html
 .input/
+
+L2CS_results/
