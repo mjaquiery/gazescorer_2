@@ -52,14 +52,11 @@ for label in labels:
             if len(yaw) != 1:
                 print(f"WARNING: Found {len(yaw)} faces in frame {frame_number} of {video_file}. Using the first entry.")
                 print(yaw)
+                yaw = yaw[0]
 
             if len(pitch) != 1:
                 print(f"WARNING: Found {len(pitch)} faces in frame {frame_number} of {video_file}. Using the first entry.")
                 print(pitch)
-
-            if isinstance(yaw, list):
-                yaw = yaw[0]
-            if isinstance(pitch, list):
                 pitch = pitch[0]
 
             results.loc[len(results)] = [
