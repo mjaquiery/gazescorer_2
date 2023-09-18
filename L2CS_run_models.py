@@ -67,11 +67,12 @@ for label in labels:
                 labels[0 if yaw > 0 else 1],
                 label
             ]
-            frame_number += 1
+            os.makedirs(os.path.join(output_dir, label), exist_ok=True)
             cv2.imwrite(
                 os.path.join(output_dir, label, f"{video_file}_{frame_number}.png"),
                 render(frame, frame_results)
             )
+            frame_number += 1
         video.release()
 
     print(f"Processed {video_file_count} videos in input {input_dir}. Time elapsed: {time.time() - label_time} seconds")
