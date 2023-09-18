@@ -14,6 +14,8 @@ Videos are segmented into directories by label.
 Each video is processed frame by frame. Each frame is processed by the model, and the results are saved to a CSV file.
 """
 
+save_videos = False
+
 input_dir_base = os.path.join(r"./video_input")
 output_dir_base = os.path.join(r".output/L2CS_video_output")
 labels = ["left", "right"]
@@ -51,10 +53,10 @@ for label in labels:
             pitch = frame_results.pitch
             face_count = 0
             if len(yaw) != 1 or len(pitch) != 1:
-                print(f"WARNING: Found {len(yaw)} faces in frame {frame_number} of {video_file}. Using the first entry.")
+                face_count = max(len(yaw), len(pitch))
+                print(f"WARNING: Found {face_count} faces in frame {frame_number} of {video_file}. Using the first entry.")
                 yaw = yaw[0]
                 pitch = pitch[0]
-                face_count = max(len(yaw), len(pitch))
 
             results.loc[len(results)] = [
                 video_file,
@@ -65,27 +67,28 @@ for label in labels:
                 labels[0 if pitch < 0 else 1],
                 label
             ]
-            os.makedirs(os.path.join(output_dir, label), exist_ok=True)
-            img = render(frame, frame_results)
-            cv2.putText(
-                img,
-                f"pitch {round(float(results.pitch[0]), 2)}",
-                (25, 25),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                1,
-                (0, 0, 0),
-                thickness=2
-            )
-            cv2.putText(
-                img,
-                f"yaw {round(float(results.yaw[0]), 2)}",
-                (25, 50),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                1,
-                (0, 0, 0),
-                thickness=2
-            )
-            cv2.imwrite(os.path.join(output_dir, label, f"{video_file}_{frame_number}.png"), img)
+            if save_videos:
+                os.makedirs(os.path.join(output_dir, label), exist_ok=True)
+                img = render(frame, frame_results)
+                cv2.putText(
+                    img,
+                    f"pitch {round(float(results.pitch[0]), 2)}",
+                    (25, 25),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    1,
+                    (0, 0, 0),
+                    thickness=2
+                )
+                cv2.putText(
+                    img,
+                    f"yaw {round(float(results.yaw[0]), 2)}",
+                    (25, 50),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    1,
+                    (0, 0, 0),
+                    thickness=2
+                )
+                cv2.imwrite(os.path.join(output_dir, label, f"{video_file}_{frame_number}.png"), img)
             frame_number += 1
     video.release()
 
