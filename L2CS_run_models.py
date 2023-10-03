@@ -37,7 +37,7 @@ for label in labels:
     # Iterate over each video
     video_file_count = 0
     for video_dir in os.listdir(input_dir):
-        for video_file in os.listdir(video_dir):
+        for video_file in os.listdir(os.path.join(input_dir, video_dir)):
             video_file_count += 1
             video_file_time = time.time()
 
