@@ -42,7 +42,7 @@ for label in labels:
             video_file_time = time.time()
 
             # Load the video and split into frames
-            video = cv2.VideoCapture(os.path.join(input_dir, video_file))
+            video = cv2.VideoCapture(os.path.join(input_dir, video_dir, video_file))
             frame_number = 0
             while video.isOpened():
                 ret, frame = video.read()
@@ -91,7 +91,7 @@ for label in labels:
                     )
                     cv2.imwrite(os.path.join(output_dir, label, f"{video_file}_{frame_number}.png"), img)
                 frame_number += 1
-        video.release()
+            video.release()
 
 print(f"Processed {video_file_count} videos in input {input_dir}. Time elapsed: {time.time() - label_time} seconds")
 
