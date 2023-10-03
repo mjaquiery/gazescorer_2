@@ -18,7 +18,7 @@ save_videos = False
 
 input_dir_base = os.path.join(r"./video_input")
 output_dir_base = os.path.join(r".output/L2CS_video_output")
-labels = ["left", "right"]
+labels = ["left", "right", "trial"]
 gaze_pipeline = Pipeline(
     weights=pathlib.Path('models/Gaze360/L2CSNet_gaze360.pkl'),
     arch='ResNet50',

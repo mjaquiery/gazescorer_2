@@ -84,7 +84,7 @@ accuracy_by_frame_count
 ggplot(accuracy_by_frame_count, aes(x = frames, y = accuracy)) +
   geom_point()
 
-
+# videos with errors
 frame_average %>% 
   filter(!correct) %>%
   select(video, face_count, frame_count, mean_pitch, correct) %>%
@@ -100,6 +100,7 @@ frame_average %>%
   mutate(accuracy = correctTRUE / (correctTRUE + correctFALSE)) %>%
   arrange(accuracy)
 
+# worst-classified participant's videos
 frame_average %>% 
   filter(!correct, str_starts(video, '0011'))
 
@@ -152,13 +153,15 @@ combined_accuracy_votes %>%
   select(video, face_count, frame_count, correct) %>%
   arrange(-face_count, -frame_count)
 
-misclassified <- 
-  tribble(
-    ~video, ~reason,
-    "0001_17_11_L.mp4", "wrong label",
-    "0002_17_56_R.mp4", "ambiguous",
-    
-    
-  )
+# disagreements between votes-based and averaging pitch combination techniques
+combined_accuracy_votes %>% 
+  left_join(
+    frame_average %>% select(video, correct, mean_pitch),
+    by = "video",
+    suffix = c("", "_using_mean_pitch")
+  ) %>%
+  filter(correct != correct_using_mean_pitch) %>%
+  select(video, frame_count, prob_right, mean_pitch, actual_class) %>%
+  arrange(prob_right, -mean_pitch)
 
 ```
