@@ -14,7 +14,7 @@ et_info_all <- read_csv(paste0("../.output/monkshood/", "ET_output_results.csv")
 
 et_info_ok <- et_info_all %>% filter(str_starts(status, "0"))
 
-et_info_highpass <- et_info_ok %>% filter(abs(left_gaze_x) > 0.5)
+et_info_highpass <- et_info_ok #%>% filter(abs(left_gaze_x) > 0.5)
 
 et_info <- et_info_highpass %>%
   rename(ET_class = actual_class) %>%
@@ -100,126 +100,53 @@ results %>%
 
 ```
 
-Prediction with frames combined.
+Accuracy by participant
 
 ```{r}
 
-frame_average <- results %>% 
-  group_by(video, actual_class, face_count) %>%
-  summarise(
-    mean_pitch = mean(pitch), 
-    frame_count = n(),
-    .groups = "drop"
-  ) %>%
+results_with_centre %>%
   mutate(
-    predicted_class = if_else(mean_pitch < 0, 'left', 'right'),
-    correct = predicted_class == actual_class
-  )
-
-ggplot(frame_average, aes(x = mean_pitch, fill = actual_class)) +
-  geom_histogram(alpha = 1/3, position = position_identity()) +
-  ggtitle(glue("Predictive accuracy of classification (frames averaged)")) +
-  theme(legend.position = "top")
-
-ggplot(frame_average, aes(x = mean_pitch, y = frame_count, colour = actual_class)) +
-  geom_point(alpha = 0.2) +
-  ggtitle("Accuracy by direction and frame count") +
-  theme(legend.position = "top")
-
-frame_average %>%
-  summarise(accuracy = mean(correct))
-
-frame_average %>% 
-  group_by(actual_class, face_count) %>%
-  summarise(mean(correct))
-
-accuracy_by_frame_count <- frame_average %>%
-  mutate(frames = cut(frame_count, 10)) %>%
-  group_by(frames) %>%
-  summarise(accuracy = mean(correct), n = n())
-accuracy_by_frame_count
-
-ggplot(accuracy_by_frame_count, aes(x = frames, y = accuracy)) +
-  geom_point()
-
-# videos with errors
-frame_average %>% 
-  filter(!correct) %>%
-  select(video, face_count, frame_count, mean_pitch, correct) %>%
-  arrange(-abs(mean_pitch), -face_count, -frame_count)
-
-# errors by participant video
-frame_average %>%
-  mutate(participant = str_extract(video, "^[^_]+")) %>%
-  group_by(participant, correct) %>% 
-  summarise(n = n()) %>%
-  pivot_wider(names_from = correct, names_prefix = "correct", values_from = n) %>%
-  mutate(across(starts_with('correct'), ~ if_else(is.na(.), 0L, .))) %>%
-  mutate(accuracy = correctTRUE / (correctTRUE + correctFALSE)) %>%
-  arrange(accuracy)
-
-# worst-classified participant's videos
-frame_average %>% 
-  filter(!correct, str_starts(video, '0011'))
+    participant = str_extract(video, "^\\d+"),
+    correct = ((pitch < 0) == (left_gaze_x < 0))
+  ) %>%
+  group_by(participant, predicted_class) %>%
+  summarise(accuracy = mean(correct)) %>%
+  pivot_wider(names_from = predicted_class, values_from = accuracy)
 
 ```
 
-Prediction with frames combined via votes.
+Participant calibration demo
 
 ```{r}
 
-frame_average_votes <- results %>% 
-  group_by(video, actual_class, face_count) %>%
-  summarise(
-    prob_right = mean(predicted_class == 'right'), 
-    frame_count = n(),
-    .groups = "drop"
-  )
+accuracy_by_threshold <- function(df, steps = 1000) {
+  out <- NULL
+  
+  #for (n in seq(min(df$pitch), max(df$pitch), length.out = steps)) {
+  for (n in seq(-2, 2, length.out = steps)) {
+    out <- out %>%
+      rbind(
+        tibble(
+          threshold = n,
+          accuracy = mean((df$pitch < 0) == (df$left_gaze_x < n))
+        )
+      )
+  }
+  out
+}
 
-ggplot(frame_average_votes, aes(x = prob_right, fill = actual_class)) +
-  geom_histogram(alpha = 1/3, position = position_identity()) +
-  ggtitle(glue("Predictive accuracy of classification (frames averaged)")) +
-  theme(legend.position = "top")
+results_by_participant <- results_with_centre %>%
+  mutate(participant = str_extract(video, "^\\d+")) %>%
+  nest(df = -participant) %>%
+  arrange(participant) %>%
+  mutate(results = map(df, accuracy_by_threshold)) %>%
+  unnest(results)
 
-ggplot(frame_average_votes, aes(x = prob_right, y = frame_count, colour = actual_class)) +
-  geom_point(alpha = 0.2) +
-  ggtitle("Accuracy by direction and frame count") +
-  theme(legend.position = "top")
+results_by_participant %>%
+  ggplot(aes(x = threshold, y = accuracy)) +
+  geom_point() +
+  facet_wrap(~participant)
 
-combined_accuracy_votes <- frame_average_votes %>% 
-  mutate(correct = (prob_right > .5) == (actual_class == "right"))
-
-combined_accuracy_votes %>%
-  summarise(accuracy = mean(correct))
-
-combined_accuracy_votes %>% 
-  group_by(actual_class, face_count) %>%
-  summarise(mean(correct))
-
-accuracy_by_frame_count_votes <- combined_accuracy_votes %>%
-  mutate(frames = cut(frame_count, 10)) %>%
-  group_by(frames) %>%
-  summarise(accuracy = mean(correct), n = n())
-accuracy_by_frame_count_votes
-
-ggplot(accuracy_by_frame_count_votes, aes(x = frames, y = accuracy)) +
-  geom_point()
-
-
-combined_accuracy_votes %>% 
-  filter(!correct) %>%
-  select(video, face_count, frame_count, correct) %>%
-  arrange(-face_count, -frame_count)
-
-# disagreements between votes-based and averaging pitch combination techniques
-combined_accuracy_votes %>% 
-  left_join(
-    frame_average %>% select(video, correct, mean_pitch),
-    by = "video",
-    suffix = c("", "_using_mean_pitch")
-  ) %>%
-  filter(correct != correct_using_mean_pitch) %>%
-  select(video, frame_count, prob_right, mean_pitch, actual_class) %>%
-  arrange(prob_right, -mean_pitch)
+  
 
 ```
