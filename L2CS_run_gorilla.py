@@ -16,7 +16,7 @@ Each video is processed frame by frame. Each frame is processed by the model, an
 
 save_videos = False
 
-input_dir_base = os.path.join(r"./video_input/BRM_input/input")
+input_dir_base = os.path.join(r"./video_input/BRM_input/input/raw_videos")
 output_dir_base = os.path.join(r".output/L2CS_gorilla")
 input_dirs = ["adult/processed", "child/processed"]
 gaze_pipeline = Pipeline(
