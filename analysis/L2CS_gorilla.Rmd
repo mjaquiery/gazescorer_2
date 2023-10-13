@@ -1,0 +1,102 @@
+---
+title: "GazeScorer model analysis using l2cs_score code"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(glue)
+
+results_raw <- read_csv(paste0("../.output/L2CS_gorilla/", "/results.csv")) %>%
+  mutate(participant = str_extract(video, "PID_.?\\d+")) %>%
+  select(-video)
+
+scoring_raw <- NULL
+
+for (f in list.files(
+  "../.output/L2CS_gorilla", 
+  full.names = TRUE,
+  pattern = "PID_.*\\.csv"
+)) {
+  scoring_raw <- bind_rows(
+    scoring_raw, 
+    read_csv(f) %>% 
+      mutate(participant = str_extract(f, "PID_.?\\d+")) %>%
+      select(participant, frame, leye, reye, human_rating = overall)
+  )
+}
+
+results <- left_join(results_raw, scoring_raw, by = c("participant", "frame")) %>%
+  select(participant, frame, face_count, l2cs_score = pitch, human_rating) %>%
+  mutate(
+    human_rating = factor(
+      human_rating,
+      levels = c(-1, 0, 1, 99),
+      labels = c("Right", "Centre", "Left", "Blink")
+    ))
+
+```
+
+Basic stats.
+
+```{r}
+
+results %>% 
+  group_by(human_rating) %>%
+  summarise(n = n(), mean_l2cs_score = mean(l2cs_score))
+
+acc_by_p <- results %>% 
+  filter(human_rating != 'Blink' & !is.na(human_rating)) %>%
+  nest(df = -participant) %>%
+  mutate(
+    acc_left = map_dbl(df, \(df) {
+      df %>% 
+        filter(human_rating == 'Left') %>%
+        summarise(acc = mean(l2cs_score < 0)) %>%
+        pull(acc)
+    }),
+    acc_right = map_dbl(df, \(df) {
+      df %>% 
+        filter(human_rating == 'Right') %>%
+        summarise(acc = mean(l2cs_score > 0)) %>%
+        pull(acc)
+    }),
+    acc_overall = map_dbl(df, \(df) {
+      df %>%
+        filter(human_rating != 'Centre') %>%
+        summarise(acc = mean((l2cs_score < 0) == (human_rating == 'Left'))) %>%
+        pull(acc)
+    }),
+    face_count = map_dbl(df, ~ max(.$face_count))
+  )
+
+acc_by_p %>% select(-df) %>% arrange(acc_overall)
+
+acc_by_p %>% 
+  select(-participant, -df) %>% 
+  group_by(face_count) %>%
+  summarise(across(everything(), mean))
+
+```
+
+Basic visulisation.
+
+```{r}
+
+results %>% 
+  filter(face_count == 1) %>%
+  ggplot(aes(x = l2cs_score, y = participant, colour = human_rating)) +
+  geom_point(position = position_jitter(0.1), alpha = 0.2)
+
+```
+
+Participant gaze by frame
+
+```{r}
+
+results %>% 
+  ggplot(aes(y = frame, x = l2cs_score, colour = human_rating)) +
+  facet_wrap(~ participant) +
+  geom_point()
+
+```
