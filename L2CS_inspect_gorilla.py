@@ -50,24 +50,6 @@ for video_file in files:
             frame_results = gaze_pipeline.step(frame)
             os.makedirs(os.path.join(output_dir), exist_ok=True)
             img = render(frame, frame_results)
-            cv2.putText(
-                img,
-                f"pitch {round(float(results.pitch[0]), 2)}",
-                (25, 25),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                1,
-                (0, 0, 0),
-                thickness=2
-            )
-            cv2.putText(
-                img,
-                f"yaw {round(float(results.yaw[0]), 2)}",
-                (25, 50),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                1,
-                (0, 0, 0),
-                thickness=2
-            )
             cv2.imwrite(os.path.join(output_dir, f"{os.path.basename(video_file)}_{frame_number}.png"), img)
         except Exception as e:
             print(f"ERROR: Failed to process frame {frame_number} of {video_file}: {e}")
