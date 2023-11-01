@@ -10,7 +10,7 @@ library(glue)
 results <- read_csv(paste0("../.output/monkshood/", "/results.csv")) %>%
   mutate(source = 'L2CS')
 
-et_info_all <- read_csv(paste0("../.output/monkshood/", "ET_output_results.csv"))
+et_info_all <- read_csv(paste0("../.output/monkshood/", "corrected_ET_output_results.csv"))
 
 et_info_ok <- et_info_all %>% filter(str_starts(status, "0"))
 
@@ -18,7 +18,7 @@ et_info_highpass <- et_info_ok #%>% filter(abs(left_gaze_x) > 0.5)
 
 et_info <- et_info_highpass %>%
   rename(ET_class = actual_class) %>%
-  mutate(ET_class = case_when(left_gaze_x < 0 ~ 'left', left_gaze_x > 0 ~ 'right', T ~ 'centre')) %>%
+  # mutate(ET_class = case_when(left_gaze_x < 0 ~ 'left', left_gaze_x > 0 ~ 'right', T ~ 'centre')) %>%
   select(video, frame, ET_class, left_gaze_x)
 
 results <- results %>%
