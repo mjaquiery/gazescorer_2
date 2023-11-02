@@ -14,14 +14,14 @@ Each video is processed frame by frame. Each frame is processed by the model, an
 """
 
 save_videos = True
-max_videos = 1
+max_videos = 0
 
 input_dir = os.path.join(r"./video_input/Number_comparison_online")
 output_dir = os.path.join(r".output/L2CS_NCO")
 gaze_pipeline = Pipeline(
     weights=pathlib.Path('models/Gaze360/L2CSNet_gaze360.pkl'),
     arch='ResNet50',
-    device=torch.device('cpu')  # or 'gpu'
+    device=torch.device(0)  # or 'gpu'
 )
 
 start_time = time.time()
@@ -78,7 +78,7 @@ for video_file in os.listdir(input_dir):
         frame_number += 1
     video.release()
 
-    if save_videos:
+    if save_videos and len(frames) > 0:
         os.makedirs(os.path.join(output_dir, "videos"), exist_ok=True)
         video_out = cv2.VideoWriter(
             os.path.join(output_dir, "videos", f"{video_file}.mp4"),
@@ -89,6 +89,8 @@ for video_file in os.listdir(input_dir):
         for frame in frames:
             video_out.write(frame)
         video_out.release()
+    elif save_videos:
+        print(f"WARNING: No frames found for {video_file}")
 
     if len(errors):
         print(f"Processed {video_file} in {round(time.time() - video_file_time, 2)}s with {len(errors)} errors: {errors}")
