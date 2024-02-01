@@ -150,3 +150,29 @@ results_by_participant %>%
   
 
 ```
+
+Accuracy by left_gaze_x magnitude
+
+```{r}
+
+.summary <- results_with_centre %>% 
+  filter(left_gaze_x < 1, left_gaze_x > -1) %>%
+  mutate(category = cut(left_gaze_x, breaks = 10)) %>%
+  group_by(category) %>%
+  summarise(accuracy = mean((left_gaze_x < 0) == (pitch < 0)), n = n())
+
+.summary
+
+ggplot(.summary, aes(x = category, y = accuracy)) +
+  geom_point()
+
+results_with_centre %>%
+  mutate(
+    et_says_left = left_gaze_x < 0,
+    l2cs_says_left = pitch < 0
+  ) %>%
+  group_by(et_says_left, l2cs_says_left) %>%
+  summarise(n = n())
+
+```
+

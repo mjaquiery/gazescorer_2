@@ -16,8 +16,8 @@ Each video is processed frame by frame. Each frame is processed by the model, an
 save_videos = True
 max_videos = 0
 
-input_dir = os.path.join(r"./video_input/Number_comparison_online")
-output_dir = os.path.join(r".output/L2CS_NCO")
+input_dir = os.path.join(r"./video_input/Number_comparison_online_new")
+output_dir = os.path.join(r".output/L2CS_NCO_new")
 gaze_pipeline = Pipeline(
     weights=pathlib.Path('models/Gaze360/L2CSNet_gaze360.pkl'),
     arch='ResNet50',
