@@ -11,12 +11,12 @@ library(tidyverse)
 library(glue)
 library(ez)
 
-results <- read_csv(paste0("../.output/L2CS_NCO/", "/results.csv")) %>%
+results <- read_csv(paste0("../.output/L2CS_NCO_new/", "/results.csv")) %>%
   mutate(video = str_replace(video, "_processed\\.mp4", ""))
 
-study_data <- read_csv(paste0("../.output/L2CS_NCO/", "number_comparison_output.csv")) %>%
+study_data <- read_csv(paste0("../.output/L2CS_NCO_new/", "number_comparison_online.csv")) %>%
   mutate(
-    video = str_replace(vid_fname, "\\.webm", ""),
+    video = str_replace(vid_fname, "(_processed)?\\.(webm|mp4)", ""),
     Correct = if_else(Correct == 1, "Correct", "Incorrect")
   ) %>%
   select(-X1)
@@ -30,7 +30,9 @@ results <- results_full %>%
     p_looks_right = mean(pitch > 0)
   )
 
-results <- results %>% left_join(study_data, by = c("video"))
+results <- results %>% 
+  left_join(study_data, by = c("video")) %>%
+  filter(!str_starts(PID, "test"))
 
 results %>% group_by(Response) %>% summarise(n = n())
 
@@ -42,7 +44,7 @@ results %>% group_by(face_count) %>% summarise(n = n())
 
 results_all_faces <- results
 
-result <- results_all_faces %>% filter(face_count == 1)
+results <- results_all_faces %>% filter(face_count == 1)
 
 ```
 
@@ -116,6 +118,10 @@ T-test of Response
   group_by(PID, Response) %>% 
   summarise(p_looks_right = mean(p_looks_right), .groups = "drop")
 
+ggplot(.summary, aes(x = Response, y = p_looks_right)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_point(position = "jitter", alpha = 0.2)
+
 t.test(p_looks_right ~ Response, data = .summary)
 
 ```
@@ -134,7 +140,13 @@ results_with_both <- results %>%
       NA
   })) %>%
   filter(!is.na(data)) %>%
-  unnest(data)
+  unnest(data) %>%
+  group_by(PID, Response) %>% 
+  summarise(p_looks_right = mean(p_looks_right), .groups = "drop")
+
+ggplot(results_with_both, aes(x = Response, y = p_looks_right)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_point(position = "jitter", alpha = 0.2)
 
 t.test(
   x = results_with_both %>% filter(Response == "Right") %>% pull(p_looks_right),
