@@ -15,6 +15,7 @@ columbia_gaze_data_set
 !columbia_gaze_data_set/README*
 !columbia_gaze_data_set/*.py
 .output
+!.output/.gitkeep
 video_input/*
 !video_input/.gitkeep
 docs
